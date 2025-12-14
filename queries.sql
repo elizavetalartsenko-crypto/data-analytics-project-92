@@ -9,12 +9,12 @@ FROM customers;
 SELECT
     e.first_name || ' ' || e.last_name AS seller,
     COUNT(s.quantity) AS operations,
-    s.quantity*p.price AS income
+    ROUND(s.quantity*p.price, 0) AS income
 FROM sales s
 JOIN employees e
 ON s.sales_person_id = e.employee_id
-join products as p
-on s.product_id = p.product_id 
+JOIN products AS p
+ON s.product_id = p.product_id 
 GROUP BY seller, s.quantity, p.price
 ORDER BY income DESC
 LIMIT 10;
