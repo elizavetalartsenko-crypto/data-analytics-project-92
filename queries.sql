@@ -1,67 +1,58 @@
 -- Общее количество покупателей
 SELECT
     COUNT(*) AS customers_count
-FROM customers;
+FROM customers AS c;
 
 
 -- Топ-10 продавцов по выручке
 SELECT
-    e.first_name || ' ' || e.last_name AS seller,
+    CONCAT(e.first_name, ' ', e.last_name) AS seller,
     COUNT(*) AS operations,
     SUM(s.quantity * p.price) AS income
-FROM employees
-INNER JOIN sales AS s
-    ON s.sales_person_id = employees.employee_id
+FROM sales AS s
+INNER JOIN employees AS e
+    ON s.sales_person_id = e.employee_id
 INNER JOIN products AS p
     ON s.product_id = p.product_id
 GROUP BY
+    e.employee_id,
     e.first_name,
-    e.last_name,
-    employees.employee_id
+    e.last_name
 ORDER BY income DESC
 LIMIT 10;
 
 
--- Продавцы с ниже средней выручкой за сделку
+-- Продавцы с ниже средней выручкой за сделку, округление вниз
 SELECT
-    e.first_name || ' ' || e.last_name AS seller,
-    CAST(
-        AVG(s.quantity * p.price)
-        AS INTEGER
-    ) AS average_income
-FROM employees
-INNER JOIN sales AS s
-    ON s.sales_person_id = employees.employee_id
-INNER JOIN products AS p
-    ON s.product_id = p.product_id
-GROUP BY
-    e.first_name,
-    e.last_name,
-    employees.employee_id
+    CONCAT(e.first_name, ' ', e.last_name) AS seller,
+    FLOOR(AVG(s.quantity * p.price)) AS average_income
+FROM sales AS s
+JOIN employees AS e ON s.sales_person_id = e.employee_id
+JOIN products AS p ON s.product_id = p.product_id
+GROUP BY e.employee_id, e.first_name, e.last_name
 HAVING AVG(s.quantity * p.price) < (
-    SELECT
-        AVG(s2.quantity * p2.price)
-    FROM sales AS s2
-    INNER JOIN products AS p2
-        ON s2.product_id = p2.product_id
+    SELECT AVG(s1.quantity * p1.price)
+    FROM sales AS s1
+    JOIN products AS p1 ON s1.product_id = p1.product_id
 )
 ORDER BY average_income ASC;
 
 
+
 -- Выручка продавцов по дням недели
 SELECT
-    e.first_name || ' ' || e.last_name AS seller,
-    LOWER(TO_CHAR(s.sale_date, 'FMDay')) AS day_of_week,
-    SUM(s.quantity * p.price) AS income
-FROM employees
-INNER JOIN sales AS s
-    ON s.sales_person_id = employees.employee_id
+    CONCAT(e.first_name, ' ', e.last_name) AS seller,
+    INITCAP(TO_CHAR(s.sale_date, 'FMDay')) AS day_of_week,
+    CAST(SUM(s.quantity * p.price) AS BIGINT) AS income
+FROM sales AS s
+INNER JOIN employees AS e
+    ON s.sales_person_id = e.employee_id
 INNER JOIN products AS p
     ON s.product_id = p.product_id
 GROUP BY
+    e.employee_id,
     e.first_name,
     e.last_name,
-    employees.employee_id,
     EXTRACT(DOW FROM s.sale_date),
     TO_CHAR(s.sale_date, 'FMDay')
 ORDER BY
@@ -79,11 +70,11 @@ SELECT
 FROM (
     SELECT
         CASE
-            WHEN age BETWEEN 16 AND 25 THEN '16-25'
-            WHEN age BETWEEN 26 AND 40 THEN '26-40'
+            WHEN c.age BETWEEN 16 AND 25 THEN '16-25'
+            WHEN c.age BETWEEN 26 AND 40 THEN '26-40'
             ELSE '40+'
         END AS age_category
-    FROM customers
+    FROM customers AS c
 ) AS sub
 GROUP BY age_category
 ORDER BY
@@ -98,13 +89,13 @@ ORDER BY
 SELECT
     TO_CHAR(s.sale_date, 'YYYY-MM') AS selling_month,
     COUNT(DISTINCT s.customer_id) AS total_customers,
-    SUM(s.quantity * p.price) AS income
+    CAST(SUM(s.quantity * p.price) AS BIGINT) AS income
 FROM sales AS s
 INNER JOIN products AS p
     ON s.product_id = p.product_id
 GROUP BY
     TO_CHAR(s.sale_date, 'YYYY-MM')
-ORDER BY selling_month;
+ORDER BY selling_month ASC;
 
 
 -- Покупатели с первой покупкой акционного товара
@@ -123,13 +114,13 @@ WITH first_sales AS (
     WHERE p.price = 0
 )
 SELECT
-    c.first_name || ' ' || c.last_name AS customer,
-    first_sales.sale_date,
-    e.first_name || ' ' || e.last_name AS seller
-FROM first_sales
+    CONCAT(c.first_name, ' ', c.last_name) AS customer,
+    fs.sale_date AS sale_date,
+    CONCAT(e.first_name, ' ', e.last_name) AS seller
+FROM first_sales AS fs
 INNER JOIN customers AS c
-    ON c.customer_id = first_sales.customer_id
+    ON c.customer_id = fs.customer_id
 INNER JOIN employees AS e
-    ON e.employee_id = first_sales.sales_person_id
-WHERE first_sales.rn = 1
-ORDER BY first_sales.customer_id;
+    ON e.employee_id = fs.sales_person_id
+WHERE fs.rn = 1
+ORDER BY fs.customer_id;
