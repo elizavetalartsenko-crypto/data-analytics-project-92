@@ -114,7 +114,6 @@ ORDER BY
     selling_month ASC;
 
 
-
 -- Покупатели с первой покупкой акционного товара
 WITH first_sales AS (
     SELECT
@@ -127,21 +126,22 @@ WITH first_sales AS (
         ) AS rn
     FROM
         sales AS s
-        INNER JOIN products AS p
-            ON s.product_id = p.product_id
+    INNER JOIN products AS p
+        ON s.product_id = p.product_id
     WHERE
         p.price = 0
 )
+
 SELECT
+    fs.sale_date,
     CONCAT(c.first_name, ' ', c.last_name) AS customer,
-    fs.sale_date AS sale_date,
     CONCAT(e.first_name, ' ', e.last_name) AS seller
 FROM
     first_sales AS fs
-    INNER JOIN customers AS c
-        ON c.customer_id = fs.customer_id
-    INNER JOIN employees AS e
-        ON e.employee_id = fs.sales_person_id
+INNER JOIN customers AS c
+    ON fs.customer_id = c.customer_id
+INNER JOIN employees AS e
+    ON fs.sales_person_id = e.employee_id
 WHERE
     fs.rn = 1
 ORDER BY
