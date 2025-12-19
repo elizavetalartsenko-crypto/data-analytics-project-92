@@ -133,7 +133,6 @@ WITH first_sales AS (
     WHERE
         p.price = 0
 )
-
 SELECT
     CONCAT(c.first_name, ' ', c.last_name) AS customer,
     fs.sale_date,
