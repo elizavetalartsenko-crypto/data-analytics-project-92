@@ -1,8 +1,7 @@
 -- Общее количество покупателей
-SELECT
-    COUNT(*) AS customers_count
+SELECT COUNT(*) AS customers_count
 FROM
-    customers AS c;
+    customers;
 
 
 -- Топ-10 продавцов по выручке
@@ -12,10 +11,10 @@ SELECT
     FLOOR(SUM(s.quantity * p.price)) AS income
 FROM
     sales AS s
-    JOIN employees AS e
-        ON e.employee_id = s.sales_person_id
-    JOIN products AS p
-        ON p.product_id = s.product_id
+INNER JOIN employees AS e
+    ON s.sales_person_id = e.employee_id
+INNER JOIN products AS p
+    ON s.product_id = p.product_id
 GROUP BY
     e.employee_id,
     e.first_name,
@@ -31,22 +30,21 @@ SELECT
     FLOOR(AVG(s.quantity * p.price)) AS average_income
 FROM
     sales AS s
-    JOIN employees AS e
-        ON s.sales_person_id = e.employee_id
-    JOIN products AS p
-        ON s.product_id = p.product_id
+INNER JOIN employees AS e
+    ON s.sales_person_id = e.employee_id
+INNER JOIN products AS p
+    ON s.product_id = p.product_id
 GROUP BY
     e.employee_id,
     e.first_name,
     e.last_name
 HAVING
     AVG(s.quantity * p.price) < (
-        SELECT
-            AVG(s1.quantity * p1.price)
+        SELECT AVG(s1.quantity * p1.price)
         FROM
             sales AS s1
-            JOIN products AS p1
-                ON s1.product_id = p1.product_id
+        INNER JOIN products AS p1
+            ON s1.product_id = p1.product_id
     )
 ORDER BY
     average_income ASC;
@@ -59,10 +57,10 @@ SELECT
     FLOOR(SUM(s.quantity * p.price)) AS income
 FROM
     sales AS s
-    JOIN employees AS e
-        ON e.employee_id = s.sales_person_id
-    JOIN products AS p
-        ON p.product_id = s.product_id
+INNER JOIN employees AS e
+    ON s.sales_person_id = e.employee_id
+INNER JOIN products AS p
+    ON s.product_id = p.product_id
 GROUP BY
     e.employee_id,
     e.first_name,
@@ -108,12 +106,13 @@ SELECT
     CAST(SUM(s.quantity * p.price) AS BIGINT) AS income
 FROM
     sales AS s
-    INNER JOIN products AS p
-        ON s.product_id = p.product_id
+INNER JOIN products AS p
+    ON s.product_id = p.product_id
 GROUP BY
     TO_CHAR(s.sale_date, 'YYYY-MM')
 ORDER BY
     selling_month ASC;
+
 
 
 -- Покупатели с первой покупкой акционного товара
@@ -143,6 +142,39 @@ FROM
         ON c.customer_id = fs.customer_id
     INNER JOIN employees AS e
         ON e.employee_id = fs.sales_person_id
+WHERE
+    fs.rn = 1
+ORDER BY
+    fs.customer_id;
+
+-- Покупатели с первой покупкой акционного товара
+WITH first_sales AS (
+    SELECT
+        s.customer_id,
+        s.sales_person_id,
+        s.sale_date,
+        ROW_NUMBER() OVER (
+            PARTITION BY s.customer_id
+            ORDER BY s.sale_date
+        ) AS rn
+    FROM
+        sales AS s
+    INNER JOIN products AS p
+        ON s.product_id = p.product_id
+    WHERE
+        p.price = 0
+)
+
+SELECT
+    fs.sale_date,
+    CONCAT(c.first_name, ' ', c.last_name) AS customer,
+    CONCAT(e.first_name, ' ', e.last_name) AS seller
+FROM
+    first_sales AS fs
+INNER JOIN customers AS c
+    ON fs.customer_id = c.customer_id
+INNER JOIN employees AS e
+    ON fs.sales_person_id = e.employee_id
 WHERE
     fs.rn = 1
 ORDER BY
