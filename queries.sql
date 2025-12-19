@@ -25,7 +25,7 @@ ORDER BY
 LIMIT 10;
 
 
--- Продавцы с ниже средней выручкой за сделку, округление вниз
+-- Продавцы с ниже средней выручкой за сделку
 SELECT
     CONCAT(e.first_name, ' ', e.last_name) AS seller,
     FLOOR(AVG(s.quantity * p.price)) AS average_income
