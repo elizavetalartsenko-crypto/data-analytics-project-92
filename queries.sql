@@ -2,7 +2,7 @@
 SELECT
     COUNT(*) AS customers_count
 FROM
-    customers;
+    customers AS c;
 
 
 -- Топ-10 продавцов по выручке
@@ -12,10 +12,10 @@ SELECT
     FLOOR(SUM(s.quantity * p.price)) AS income
 FROM
     sales AS s
-    INNER JOIN employees AS e
-        ON s.sales_person_id = e.employee_id
-    INNER JOIN products AS p
-        ON s.product_id = p.product_id
+    JOIN employees AS e
+        ON e.employee_id = s.sales_person_id
+    JOIN products AS p
+        ON p.product_id = s.product_id
 GROUP BY
     e.employee_id,
     e.first_name,
@@ -31,9 +31,9 @@ SELECT
     FLOOR(AVG(s.quantity * p.price)) AS average_income
 FROM
     sales AS s
-    INNER JOIN employees AS e
+    JOIN employees AS e
         ON s.sales_person_id = e.employee_id
-    INNER JOIN products AS p
+    JOIN products AS p
         ON s.product_id = p.product_id
 GROUP BY
     e.employee_id,
@@ -45,7 +45,7 @@ HAVING
             AVG(s1.quantity * p1.price)
         FROM
             sales AS s1
-            INNER JOIN products AS p1
+            JOIN products AS p1
                 ON s1.product_id = p1.product_id
     )
 ORDER BY
@@ -55,14 +55,14 @@ ORDER BY
 -- Выручка продавцов по дням недели
 SELECT
     CONCAT(e.first_name, ' ', e.last_name) AS seller,
-    TRIM(TO_CHAR(s.sale_date, 'Day')) AS day_of_week,
+    TRIM(LOWER(TO_CHAR(s.sale_date, 'Day'))) AS day_of_week,
     FLOOR(SUM(s.quantity * p.price)) AS income
 FROM
     sales AS s
-    INNER JOIN employees AS e
-        ON s.sales_person_id = e.employee_id
-    INNER JOIN products AS p
-        ON s.product_id = p.product_id
+    JOIN employees AS e
+        ON e.employee_id = s.sales_person_id
+    JOIN products AS p
+        ON p.product_id = s.product_id
 GROUP BY
     e.employee_id,
     e.first_name,
@@ -84,12 +84,12 @@ SELECT
 FROM (
     SELECT
         CASE
-            WHEN age BETWEEN 16 AND 25 THEN '16-25'
-            WHEN age BETWEEN 26 AND 40 THEN '26-40'
+            WHEN c.age BETWEEN 16 AND 25 THEN '16-25'
+            WHEN c.age BETWEEN 26 AND 40 THEN '26-40'
             ELSE '40+'
         END AS age_category
     FROM
-        customers
+        customers AS c
 ) AS sub
 GROUP BY
     age_category
@@ -105,7 +105,7 @@ ORDER BY
 SELECT
     TO_CHAR(s.sale_date, 'YYYY-MM') AS selling_month,
     COUNT(DISTINCT s.customer_id) AS total_customers,
-    FLOOR(SUM(s.quantity * p.price)) AS income
+    CAST(SUM(s.quantity * p.price) AS BIGINT) AS income
 FROM
     sales AS s
     INNER JOIN products AS p
@@ -113,7 +113,7 @@ FROM
 GROUP BY
     TO_CHAR(s.sale_date, 'YYYY-MM')
 ORDER BY
-    selling_month;
+    selling_month ASC;
 
 
 -- Покупатели с первой покупкой акционного товара
@@ -135,14 +135,14 @@ WITH first_sales AS (
 )
 SELECT
     CONCAT(c.first_name, ' ', c.last_name) AS customer,
-    fs.sale_date,
+    fs.sale_date AS sale_date,
     CONCAT(e.first_name, ' ', e.last_name) AS seller
 FROM
     first_sales AS fs
     INNER JOIN customers AS c
-        ON fs.customer_id = c.customer_id
+        ON c.customer_id = fs.customer_id
     INNER JOIN employees AS e
-        ON fs.sales_person_id = e.employee_id
+        ON e.employee_id = fs.sales_person_id
 WHERE
     fs.rn = 1
 ORDER BY
